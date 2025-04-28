@@ -1,29 +1,14 @@
-if true then return {} end -- WARN: REMOVE THIS LINE TO ACTIVATE THIS FILE
+-- if true then return {} end -- WARN: REMOVE THIS LINE TO ACTIVATE THIS FILE
 
--- AstroUI provides the basis for configuring the AstroNvim User Interface
--- Configuration documentation can be found with `:h astroui`
--- NOTE: We highly recommend setting up the Lua Language Server (`:LspInstall lua_ls`)
---       as this provides autocomplete and documentation while editing
-
----@type LazySpec
 return {
   "AstroNvim/astroui",
-  ---@type AstroUIOpts
   opts = {
-    -- change colorscheme
     colorscheme = "astrodark",
-    -- AstroUI allows you to easily modify highlight groups easily for any and all colorschemes
     highlights = {
-      init = { -- this table overrides highlights in all themes
-        -- Normal = { bg = "#000000" },
-      },
-      astrodark = { -- a table of overrides/changes when applying the astrotheme theme
-        -- Normal = { bg = "#000000" },
-      },
+      init = {},
+      astrodark = {},
     },
-    -- Icons can be configured throughout the interface
     icons = {
-      -- configure the loading of the lsp in the status line
       LSPLoading1 = "⠋",
       LSPLoading2 = "⠙",
       LSPLoading3 = "⠹",
@@ -35,5 +20,55 @@ return {
       LSPLoading9 = "⠇",
       LSPLoading10 = "⠏",
     },
+    -- ✨ 加入自定义 statusline
+    status = {
+      attributes = {
+        mode = { bold = true },
+      },
+      separators = {
+        left = "",
+        right = "",
+      },
+      components = {
+        active = {
+          -- 左边
+          {
+            { provider = "mode" },
+            { provider = "git_branch" },
+            { provider = "diagnostics" },
+            { provider = "file_info" },
+          },
+          -- 中间
+          {
+            {
+              provider = function()
+                return "[tags: " .. (_G.gutentags_status or "N/A") .. "]"
+              end,
+              hl = function()
+                local status = _G.gutentags_status or "ready"
+                if status:find("updating") then
+                  return { fg = "yellow", bold = true }
+                elseif status:find("updated") then
+                  return { fg = "green", bold = true }
+                else
+                  return { fg = "gray", italic = true }
+                end
+              end,
+            },
+          },
+          -- 右边
+          {
+            { provider = "lsp" },
+            { provider = "position" },
+          },
+        },
+        inactive = {
+          {
+            { provider = "file_info" },
+          },
+        },
+      },
+    },
   },
 }
+

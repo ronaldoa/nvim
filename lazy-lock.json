@@ -1,5 +1,6 @@
 {
   "AstroNvim": { "branch": "main", "commit": "170e9cd4bf7c17ec963141399f4b0a32aa694868" },
+  "LeaderF": { "branch": "master", "commit": "5316ba1976c7bdcc0033d0f5f9d434cd4dceaf5e" },
   "LuaSnip": { "branch": "master", "commit": "03c8e67eb7293c404845b3982db895d59c0d1538" },
   "aerial.nvim": { "branch": "master", "commit": "3284a2cb858ba009c79da87d5e010ccee3c99c4d" },
   "astrocore": { "branch": "main", "commit": "87a7fd82dfba7f7fb57228e8ee28f6c8025f80ed" },
@@ -44,6 +45,7 @@
   "snacks.nvim": { "branch": "main", "commit": "5eac729fa290248acfe10916d92a5ed5e5c0f9ed" },
   "todo-comments.nvim": { "branch": "main", "commit": "304a8d204ee787d2544d8bc23cd38d2f929e7cc5" },
   "toggleterm.nvim": { "branch": "main", "commit": "50ea089fc548917cc3cc16b46a8211833b9e3c7c" },
+  "vim-gutentags": { "branch": "master", "commit": "aa47c5e29c37c52176c44e61c780032dfacef3dd" },
   "vim-illuminate": { "branch": "master", "commit": "1fa4b23409e22a03823648e344c77f260e2572cb" },
   "which-key.nvim": { "branch": "main", "commit": "fcbf4eea17cb299c02557d576f0d568878e354a4" }
 }
