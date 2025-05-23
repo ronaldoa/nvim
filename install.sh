@@ -1,64 +1,44 @@
-
 #!/bin/bash
+set -e
 
-# debug
-# set -x
+# =============================
+# Configuration & Setup
+# =============================
 
-VIM_HOME=$HOME/.vim
-INSTALL_HOME=$VIM_HOME/installer
+# Ensure required directories exist
+mkdir -p "$HOME/scripts/vim_installer" "$HOME/tools/universal-ctags" "$HOME/vim_conf"
+
+INSTALL_HOME="$HOME/scripts/vim_installer"
+CTAGS_HOME="$HOME/tools/universal-ctags"
+VIM_HOME="$HOME/vim_conf"
 OS="$(uname -s)"
+OPT_DISABLE_VIM=0
+OPT_DISABLE_NEOVIM=0
+
+
+# =============================
+# Functions
+# =============================
 
 message() {
-    local content="$*"
-    printf "[vim] - %s\n" "$content"
+    printf "[vim] - %s\n" "$*"
 }
 
 skip_message() {
-    local target="$1"
-    message "'$target' already exist, skip..."
-}
-
-error_message() {
-    local content="$*"
-    message "error! $content"
-}
-
-try_backup() {
-    local src=$1
-    if [[ -f "$src" || -d "$src" ]]; then
-        local target=$src.$(date +"%Y-%m-%d.%H-%M-%S.%6N")
-        message "backup '$src' to '$target'"
-        mv $src $target
-    fi
+    message "'$1' already exists, skip..."
 }
 
 install_or_skip() {
     local command="$1"
     local target="$2"
-    if ! type "$target" >/dev/null 2>&1; then
-        message "install '$target' with command: '$command'"
+    if ! command -v "$target" >/dev/null 2>&1; then
+        message "Installing '$target'..."
         eval "$command"
     else
-        skip_message $target
+        skip_message "$target"
     fi
 }
 
-install_universal_ctags() {
-    local VIM_HOME=$HOME/.vim
-    local CTAGS_HOME=$VIM_HOME/universal-ctags
-
-    message "install universal-ctags from source"
-    cd $VIM_HOME
-    git clone https://github.com/universal-ctags/ctags.git $CTAGS_HOME
-    cd $CTAGS_HOME
-    ./autogen.sh
-    ./configure
-    make
-    sudo make install
-}
-
-
-# dependency
 rust_dependency() {
     install_or_skip "curl https://sh.rustup.rs -sSf | sh -s -- -y" "rustc"
     source $HOME/.cargo/env
@@ -69,37 +49,26 @@ rust_dependency() {
 
 golang_dependency() {
     install_or_skip "bash <(curl -sL https://git.io/go-installer)" "go"
-    if [ -d $HOME/.go/bin ]; then
-        export PATH=$HOME/.go/bin:$PATH
+    if [ -d "$HOME/.go/bin" ]; then
+        export PATH="$HOME/.go/bin:$PATH"
     fi
 }
 
 pip3_dependency() {
-    message "install python packages (OS-specific)"
-
-    if [ "$OS" == "Darwin" ]; then
-        install_or_skip "sudo pip3 install flake8" "flake8"
-        install_or_skip "sudo pip3 install pylint" "pylint"
-        install_or_skip "sudo pip3 install black" "black"
-        sudo pip3 install neovim pynvim cmakelang click
-    elif [ "$OS" == "Linux" ] && { [ -f "/etc/arch-release" ] || [ -f "/etc/artix-release" ]; }; then
-        sudo pacman -S --needed --noconfirm \
-            python-flake8 \
-            python-pylint \
-            python-black \
-            python-neovim \
-            python-cmakelang \
-            python-click
+    message "Installing Python tools..."
+    if [[ "$OS" == "Darwin" ]]; then
+        sudo pip3 install flake8 pylint black neovim pynvim cmakelang click
+    elif [[ -f /etc/arch-release || -f /etc/artix-release ]]; then
+        sudo pacman -S --noconfirm \
+            python-flake8 python-pylint python-black \
+            python-neovim python-cmakelang python-click
     else
-        install_or_skip "sudo pip install flake8" "flake8"
-        install_or_skip "sudo pip install pylint" "pylint"
-        install_or_skip "sudo pip install black" "black"
-        sudo pip install neovim pynvim cmakelang click
+        sudo pip3 install flake8 pylint black neovim pynvim cmakelang click
     fi
 }
 
 npm_dependency() {
-    message "install node packages with npm"
+    message "Installing Node.js tools..."
     install_or_skip "sudo npm install -g yarn" "yarn"
     install_or_skip "sudo npm install -g prettier" "prettier"
     sudo npm install -g neovim
@@ -108,93 +77,112 @@ npm_dependency() {
 nerdfont_latest_release_tag() {
     local org="$1"
     local repo="$2"
-    local uri="https://github.com/$org/$repo/releases/latest"
-    curl -f -L $uri | grep "href=\"/$org/$repo/releases/tag" | grep -Eo 'href="/[a-zA-Z0-9#~.*,/!?=+&_%:-]*"' | head -n 1 | cut -d '"' -f2 | cut -d "/" -f6
+    curl -sL "https://github.com/$org/$repo/releases/latest" | grep -oP 'tag/\K[^"]+'
 }
 
 guifont_dependency() {
-    if [ "$OS" == "Darwin" ]; then
-        message "install hack nerd font with brew"
+    if [[ "$OS" == "Darwin" ]]; then
         brew tap homebrew/cask-fonts
         brew install --cask font-hack-nerd-font
     else
-        mkdir -p ~/.local/share/fonts && cd ~/.local/share/fonts
-        local org="ryanoasis"
-        local repo="nerd-fonts"
-        local font_file=Hack.zip
-        local font_version=$(nerdfont_latest_release_tag $org $repo)
-        local font_url="https://github.com/$org/$repo/releases/download/$font_version/$font_file"
-        message "install hack($font_version) nerd font from github"
-        rm -f $font_file
-        curl -L $font_url -o $font_file
-        if [ $? -ne 0 ]; then
-            message "failed to download $font_file, skip..."
-        else
-            unzip -o $font_file
-            message "install hack($font_version) nerd font from github - done"
-        fi
+        mkdir -p ~/.local/share/fonts && cd ~/.local/share/fonts || return
+        local version=$(nerdfont_latest_release_tag ryanoasis nerd-fonts)
+        local url="https://github.com/ryanoasis/nerd-fonts/releases/download/$version/Hack.zip"
+        curl -LO "$url" && unzip -o Hack.zip
+        message "Hack Nerd Font installed"
     fi
 }
 
-show_help() {
-    echo "Usage: ./install.sh [--help]"
-    echo "This script installs development dependencies for Vim/Neovim environments."
+install_pacman_dependencies() {
+    message "Installing system packages using pacman"
+
+    sudo pacman -Syy
+
+    if [ "$OPT_DISABLE_VIM" -ne 1 ]; then
+        install_or_skip "yes | sudo pacman -Rs vim" "vim"
+        install_or_skip "yes | sudo pacman -S gvim" "gvim"
+    fi
+
+    if [ "$OPT_DISABLE_NEOVIM" -ne 1 ]; then
+        install_or_skip "yes | sudo pacman -S neovim" "nvim"
+    fi
+
+    install_or_skip "yes | sudo pacman -S base-devel" "gcc"
+    install_or_skip "yes | sudo pacman -S base-devel" "make"
+    install_or_skip "yes | sudo pacman -S curl" "curl"
+    install_or_skip "yes | sudo pacman -S wget" "wget"
+    install_or_skip "yes | sudo pacman -S autoconf" "autoconf"
+    install_or_skip "yes | sudo pacman -S automake" "automake"
+    install_or_skip "yes | sudo pacman -S pkg-config" "pkg-config"
+    install_or_skip "yes | sudo pacman -S cmake" "cmake"
+    install_or_skip "yes | sudo pacman -S xclip" "xclip"
+    install_or_skip "yes | sudo pacman -S wl-clipboard" "wl-copy"
+
+    install_or_skip "yes | sudo pacman -S python python-pip" "python3"
+    install_or_skip "yes | sudo pacman -S nodejs npm" "node"
+    install_or_skip "yes | sudo pacman -S ctags" "ctags"
 }
 
-# parse options
-for a in "$@"; do
-    case "$a" in
+show_help() {
+    echo "Usage: ./setup_vim_env.sh [--disable-vim] [--disable-neovim] [--help]"
+    echo ""
+    echo "Options:"
+    echo "  --disable-vim       Do not install Vim/GVim"
+    echo "  --disable-neovim    Do not install Neovim"
+}
+
+# =============================
+# Parse Args
+# =============================
+
+for arg in "$@"; do
+    case "$arg" in
+        --disable-vim)
+            OPT_DISABLE_VIM=1
+            ;;
+        --disable-neovim)
+            OPT_DISABLE_NEOVIM=1
+            ;;
         -h|--help)
             show_help
             exit 0
             ;;
         *)
-            echo "Unknown option: $a"
+            echo "Unknown option: $arg"
             show_help
             exit 1
             ;;
     esac
 done
 
-message "Start installing development dependencies..."
+# =============================
+# Main Execution
+# =============================
 
-# install OS-specific packages
+message "Start setting up Vim/Neovim development environment..."
+
 case "$OS" in
     Linux)
-        if [ -f "/etc/arch-release" ] || [ -f "/etc/artix-release" ]; then
-            $INSTALL_HOME/pacman.sh
-        elif [ -f "/etc/fedora-release" ] || [ -f "/etc/redhat-release" ]; then
-            $INSTALL_HOME/dnf.sh
-        elif [ -f "/etc/gentoo-release" ]; then
-            $INSTALL_HOME/emerge.sh
+        if [[ -f /etc/arch-release || -f /etc/artix-release ]]; then
+            install_pacman_dependencies
         else
-            $INSTALL_HOME/apt.sh
+            message "This script currently supports only Arch-based systems and macOS"
+            exit 1
         fi
         ;;
-    FreeBSD)
-        $INSTALL_HOME/pkg.sh
-        ;;
-    NetBSD)
-        $INSTALL_HOME/pkgin.sh
-        ;;
-    OpenBSD)
-        $INSTALL_HOME/pkg_add.sh
-        ;;
     Darwin)
-        $INSTALL_HOME/brew.sh
+        message "macOS detected, you should implement a brew installer here."
         ;;
     *)
-        message "$OS is not supported, exiting..."
+        message "Unsupported OS: $OS"
         exit 1
         ;;
 esac
 
-# install language tools and fonts
 rust_dependency
 golang_dependency
 pip3_dependency
 npm_dependency
 guifont_dependency
 
-message "Dependency installation complete."
-
+message "✅ All dependencies installed successfully!"
